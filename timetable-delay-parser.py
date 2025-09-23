@@ -11,8 +11,8 @@ def parse_xml(filename):
     return ET.fromstring(xml)
 
 def parse_timestamp(ts):
-    # ts im Format DDMMYYHHMM → datetime
-    return datetime.strptime(ts, "%d%m%y%H%M")
+    # ts im Format YYMMDDHHMM → datetime (Jahr 20YY)
+    return datetime.strptime(ts, "%y%m%d%H%M")
 
 root = parse_xml('timetable.xml')
 
@@ -34,10 +34,20 @@ for s in root.findall('s'):
 
     # Metadaten aus <tl>
     tl = s.find('tl')
-    category = tl.get('c')
-    number   = tl.get('n')
-    direction= tl.get('f')    # z.B. 'F' oder 'N'
-    origin   = tl.get('o')    # EVA-Code des Ursprungsbahnhofs
+    category  = tl.get('c')
+    number    = tl.get('n')
+    direction = tl.get('f')    # z.B. 'F' oder 'N'
+    origin    = tl.get('o')    # EVA-Code des Ursprungsbahnhofs
+
+    # Streckenverlauf
+    route_elem = s.find('ar') or s.find('dp')
+    if route_elem is not None and 'cpth' in route_elem.attrib:
+        stops = route_elem.get('cpth').split('|')
+        start = stops[0] if stops else '–'
+        end   = stops[-1] if stops else '–'
+        route = ' → '.join(stops)
+    else:
+        start = end = route = '–'
 
     delays.append({
         'Kategorie':   category,
@@ -48,6 +58,9 @@ for s in root.findall('s'):
         'Gleis':       platform,
         'Richtung':    direction,
         'Ursprung EVA':origin,
+        'Startbahnhof':start,
+        'Zielbahnhof': end,
+        'Route':       route,
     })
 
 # Ausgabe als Tabelle
